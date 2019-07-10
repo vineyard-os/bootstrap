@@ -1,0 +1,58 @@
+From 7c685276f1232ff67dd3d0b22cd60c8955443e26 Mon Sep 17 00:00:00 2001
+From: no92 <no92.mail@gmail.com>
+Date: Wed, 10 Jul 2019 16:48:36 +0200
+Subject: [PATCH] Code integration
+
+---
+ source/include/acpi.h           | 21 +++++++++++++++++++++
+ source/include/platform/acenv.h |  2 ++
+ 2 files changed, 23 insertions(+)
+
+diff --git a/source/include/acpi.h b/source/include/acpi.h
+index d0249d5..7ee47cf 100644
+--- a/source/include/acpi.h
++++ b/source/include/acpi.h
+@@ -161,6 +161,27 @@
+  *
+  * Note: The order of these include files is important.
+  */
++
++#ifdef VINEYARD
++
++#include <vy.h>
++
++warn_push
++no_warn(-Wunused-parameter);
++no_warn_clang(-Wmacro-redefined);
++no_warn_clang(-Wused-but-marked-unused);
++no_warn_clang(-Wincompatible-pointer-types-discards-qualifiers);
++no_warn_clang(-Winvalid-pp-token);
++no_warn_clang(-Wmissing-variable-declarations);
++no_warn_clang(-Wnull-pointer-arithmetic);
++no_warn(-Wsign-conversion);
++no_warn_clang(-Wshorten-64-to-32);
++no_warn(-Wconversion);
++no_warn_gcc(-Wdiscarded-qualifiers);
++no_warn(-Wformat);
++
++#endif
++
+ #include "platform/acenv.h"     /* Environment-specific items */
+ #include "actypes.h"            /* ACPICA data types and structures */
+ #include "platform/acenvex.h"   /* Extra environment-specific items */
+diff --git a/source/include/platform/acenv.h b/source/include/platform/acenv.h
+index 46eeb9d..b7bf6c3 100644
+--- a/source/include/platform/acenv.h
++++ b/source/include/platform/acenv.h
+@@ -342,6 +342,8 @@
+  */
+ #elif defined(_AED_EFI) || defined(_GNU_EFI) || defined(_EDK2_EFI)
+ #include "acefi.h"
++#elif defined(VINEYARD)
++#include <acpi/acvineyard.h>
+ 
+ #else
+ 
+-- 
+2.22.0
+
