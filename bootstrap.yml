@@ -33,6 +33,8 @@ tools:
     subdir: 'tools'
     git: 'https://github.com/vineyard-os/image-builder'
     branch: 'master'
+  configure:
+  - args: ['chmod', '+x', '@THIS_SOURCE_DIR@/builder']
 
 - name: ovmf
   source:
