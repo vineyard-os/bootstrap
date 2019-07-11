@@ -179,6 +179,8 @@ packages:
   configure:
   - args: ['touch', '.config']
     workdir: '@THIS_SOURCE_DIR@'
+  - args: ['chmod', '+x', 'util/bdf-to-c']
+    workdir: '@THIS_SOURCE_DIR@'
   build:
   - args: ['make', '../boot/kernel', '-j4']
     workdir: '@THIS_SOURCE_DIR@'
