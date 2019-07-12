@@ -164,7 +164,7 @@ packages:
 - name: vineyard-efi
   source:
     subdir: 'third-party'
-    git: 'https://github.com/no92/zircon-uefi'
+    git: 'https://github.com/vineyard-os/zircon-uefi'
     branch: 'master'
   configure: []
   build: []
