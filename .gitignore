@@ -5,5 +5,8 @@ packages
 third-party
 tools
 vineyard
+loader
 bootstrap.link
 hdd.img*
+hdd.vdi
+hdd.vmdk

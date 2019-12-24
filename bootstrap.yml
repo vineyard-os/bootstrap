@@ -138,7 +138,7 @@ packages:
   source:
     subdir: 'third-party'
     git: 'https://github.com/acpica/acpica'
-    tag: 'R07_03_19'
+    tag: 'R10_18_19'
   configure:
   - args: ['make', '-C', '@THIS_SOURCE_DIR@', 'acpisrc']
   - args: ['mkdir', '-p', '@SOURCE_ROOT@/vineyard/kernel/acpica']
@@ -178,6 +178,7 @@ packages:
   - acpica
   - uni-vga
   - vineyard-efi
+  - loader
   configure:
   - args: ['touch', '.config']
     workdir: '@THIS_SOURCE_DIR@'
@@ -185,4 +186,16 @@ packages:
     workdir: '@THIS_SOURCE_DIR@'
   build:
   - args: ['make', '../boot/kernel', '-j4']
+    workdir: '@THIS_SOURCE_DIR@'
+
+- name: loader
+  source:
+    git: 'https://github.com/vineyard-os/loader'
+    branch: 'master'
+    regenerate:
+    - args: ['ln', '-sfT', '@SOURCE_ROOT@/third-party/vineyard-efi', '@THIS_SOURCE_DIR@/include/efi']
+  pkgs_required:
+  - vineyard-efi
+  build:
+  - args: ['make']
     workdir: '@THIS_SOURCE_DIR@'
