@@ -151,10 +151,12 @@ packages:
   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/utilities/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/tables/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/resources/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', '@SOURCE_ROOT@/vineyard/kernel/acpica/', '@SOURCE_ROOT@/vineyard/kernel/acpica/']
+  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', 'vineyard/kernel/acpica/', 'vineyard/kernel/acpica/']
+    workdir: '@SOURCE_ROOT@'
   - args: ['mkdir', '-p', '@SOURCE_ROOT@/vineyard/kernel/include/acpica']
   - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/include/.', '@SOURCE_ROOT@/vineyard/kernel/include/acpica/']
-  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', '@SOURCE_ROOT@/vineyard/kernel/include/acpica/', '@SOURCE_ROOT@/vineyard/kernel/include/acpica/']
+  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', 'vineyard/kernel/include/acpica/', 'vineyard/kernel/include/acpica/']
+    workdir: '@SOURCE_ROOT@'
   - args: |
       sed -i "s/const AH_TABLE/const struct ah_table/g" @SOURCE_ROOT@/vineyard/kernel/include/acpica/acdisasm.h
   - args: |
