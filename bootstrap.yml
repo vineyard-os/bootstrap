@@ -26,6 +26,20 @@ sources:
   regenerate:
     - args: ['autoreconf']
       workdir: '@THIS_SOURCE_DIR@/ld'
+- name: gcc
+  subdir: 'tools'
+  git: 'git://gcc.gnu.org/git/gcc.git'
+  tag: 'gcc-9_1_0-release'
+  tools_required:
+  - host-autoconf-v2.69
+  - host-automake-v1.11
+  regenerate:
+  - args: ['./contrib/download_prerequisites']
+    workdir: '@THIS_SOURCE_DIR@'
+  - args: ['autoconf']
+    workdir: '@THIS_SOURCE_DIR@/gcc'
+  - args: ['autoconf']
+    workdir: '@THIS_SOURCE_DIR@/libstdc++-v3'
 
 tools:
 - name: image-builder
@@ -84,7 +98,7 @@ tools:
     - args:
       - '@THIS_SOURCE_DIR@/configure'
       - '--prefix=@PREFIX@'
-      - '--target=x86_64-elf'
+      - '--target=x86_64-vineyard'
       - '--with-sysroot=@SYSROOT_DIR@'
       # On recent compilers, binutils 2.26 causes implicit-fallthrough warnings, among others.
       - '--disable-werror'
@@ -95,10 +109,34 @@ tools:
   install:
     - args: ['make', 'install-binutils', 'install-gas', 'install-ld']
     - args: |
-        for f in @PREFIX@/bin/x86_64-elf-*; do
-          tf=$(basename $f | sed 's/x86_64-elf/x86_64-vineyard-kernel/')
+        for f in @PREFIX@/bin/x86_64-vineyard-*; do
+          tf=$(basename $f | sed 's/x86_64-vineyard/x86_64-vineyard-kernel/')
           ln -sf $(basename $f) @PREFIX@/bin/$tf
         done
+
+- name: host-automake-v1.11
+  source:
+    name: automake-v1.11
+    subdir: 'tools'
+    git: 'https://git.savannah.gnu.org/r/automake.git'
+    tag: 'v1.11.6'
+    tools_required:
+    - host-autoconf-v2.69
+    regenerate:
+      - args: ['./bootstrap']
+  tools_required:
+    - host-autoconf-v2.69
+  configure:
+    - args:
+      - '@THIS_SOURCE_DIR@/configure'
+      - '--prefix=@PREFIX@'
+      - 'MAKEINFO=/bin/true'
+  compile:
+    - args: ['make', '-j@PARALLELISM@']
+  install:
+    - args: ['make', 'install']
+    # Stop aclocal from complaining.
+    - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.11', '@PREFIX@/share/aclocal']
 
 - name: host-automake-v1.15
   source:
@@ -123,6 +161,48 @@ tools:
     - args: ['make', 'install']
     # Stop aclocal from complaining.
     - args: ['ln', '-sf', '@PREFIX@/share/aclocal-1.15', '@PREFIX@/share/aclocal']
+
+- name: kernel-gcc
+  from_source: gcc
+  tools_required:
+  - tool: cross-binutils
+    recursive: true
+  configure:
+  - args:
+    - '@THIS_SOURCE_DIR@/configure'
+    - '--prefix=@PREFIX@'
+    - '--target=x86_64-vineyard'
+    - '--with-sysroot=@BUILD_ROOT@/hdd'
+    - '--enable-languages=c'
+    - '--disable-nls'
+    # -g blows up GCC's binary size.
+    - 'CFLAGS=-O2'
+    - 'CXXFLAGS=-O2'
+  stages:
+  - name: compiler
+    compile:
+      # Copy rudimentary header files into the kernel sysroot.
+      - args: |
+          mkdir -p @BUILD_ROOT@/hdd/usr/include
+      # Set inhibit_libc to prevent libgcov build.
+      # This is also required to correctly build the target libraries later.
+      - args: ['make', '-j@PARALLELISM@', 'inhibit_libc=true', 'all-gcc']
+    install:
+      - args: ['make', 'install-gcc']
+  - name: libgcc
+    tools_required:
+      - tool: kernel-gcc
+        stage_dependencies: [compiler]
+    compile:
+      - args: |
+          make inhibit_libc=true CFLAGS_FOR_TARGET='-g -O2 -mcmodel=kernel -mno-red-zone' all-target-libgcc || true
+        quiet: true
+      - args: |
+          sed -i 's/PICFLAG/DISABLED_PICFLAG/g' x86_64-vineyard/libgcc/Makefile
+          sed -i 's/PICFLAG/DISABLED_PICFLAG/g' x86_64-vineyard/no-red-zone/libgcc/Makefile
+          make inhibit_libc=true CFLAGS_FOR_TARGET='-g -O2 -mcmodel=kernel -mno-red-zone' all-target-libgcc
+    install:
+      - args: ['make', 'install-target-libgcc']
 
 packages:
 - name: uni-vga
@@ -176,6 +256,8 @@ packages:
   tools_required:
   - image-builder
   - ovmf
+  - cross-binutils
+  - kernel-gcc
   pkgs_required:
   - acpica
   - uni-vga
@@ -187,7 +269,31 @@ packages:
   - args: ['chmod', '+x', 'util/bdf-to-c']
     workdir: '@THIS_SOURCE_DIR@'
   build:
-  - args: ['make', '../boot/kernel', '-j4']
+  - args: ['make', '../boot/kernel', '-j@PARALLELISM@']
+    workdir: '@THIS_SOURCE_DIR@'
+  tasks:
+  - args: ['make', 'install', 'test']
+    name: 'test'
+    workdir: '@THIS_SOURCE_DIR@'
+    environ:
+      'USE_GCC': '1'
+  - args: ['make', 'install', 'test-gdb']
+    name: 'test-gdb'
+    workdir: '@THIS_SOURCE_DIR@'
+    environ:
+      'USE_GCC': '1'
+  - args: ['make', 'install', 'test-vbox']
+    name: 'test-vbox'
+    workdir: '@THIS_SOURCE_DIR@'
+    environ:
+      'USE_GCC': '1'
+  - args: ['make', 'install', 'test-vmware']
+    name: 'test-vmware'
+    workdir: '@THIS_SOURCE_DIR@'
+    environ:
+      'USE_GCC': '1'
+  - args: ['make', 'clean']
+    name: 'clean'
     workdir: '@THIS_SOURCE_DIR@'
 
 - name: loader
@@ -198,6 +304,22 @@ packages:
     - args: ['ln', '-sfT', '@SOURCE_ROOT@/third-party/vineyard-efi', '@THIS_SOURCE_DIR@/include/efi']
   pkgs_required:
   - vineyard-efi
+  - efifs
   build:
-  - args: ['make']
+  - args: ['make', 'install']
     workdir: '@THIS_SOURCE_DIR@'
+  tasks:
+  - args: ['make', 'clean']
+    name: 'clean'
+    workdir: '@THIS_SOURCE_DIR@'
+
+- name: efifs
+  source:
+    subdir: 'third-party'
+    url: 'https://efi.akeo.ie/downloads/efifs-latest/x64/btrfs_x64.efi'
+    format: 'raw'
+    filename: 'btrfs.efi'
+  regenerate:
+  - args: ['cp', '@THIS_SOURCE_DIR@/btrfs.efi', '@SOURCE_ROOT@/boot/btrfs.efi']
+
+tasks:
