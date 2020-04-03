@@ -50,6 +50,16 @@ tools:
   configure:
   - args: ['chmod', '+x', '@THIS_SOURCE_DIR@/builder']
 
+- name: netboot-server
+  source:
+    subdir: 'tools'
+    git: 'https://github.com/vineyard-os/netboot-server'
+    branch: 'master'
+  configure: []
+  compile:
+  - args: ['make']
+    workdir: '@THIS_SOURCE_DIR@'
+
 - name: ovmf
   source:
     subdir: 'third-party'
@@ -323,3 +333,8 @@ packages:
   - args: ['cp', '@THIS_SOURCE_DIR@/btrfs.efi', '@SOURCE_ROOT@/boot/btrfs.efi']
 
 tasks:
+- args: ['netboot-server/bin/server']
+  name: 'netboot'
+  tools_required:
+  - 'netboot-server'
+  workdir: '@SOURCE_ROOT@/tools/'
