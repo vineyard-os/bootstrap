@@ -55,10 +55,15 @@ tools:
     subdir: 'tools'
     git: 'https://github.com/vineyard-os/netboot-server'
     branch: 'master'
-  configure: []
+  configure:
+  - args:
+    - 'meson'
+    - '--prefix=@PREFIX@'
+    - '@THIS_SOURCE_DIR@'
   compile:
-  - args: ['make']
-    workdir: '@THIS_SOURCE_DIR@'
+  - args: ['ninja']
+  install:
+  - args: ['ninja', 'install']
 
 - name: ovmf
   source:
