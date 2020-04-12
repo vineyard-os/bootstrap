@@ -7,15 +7,10 @@ directories:
   tool_builds: 'builds/tool/'
   pkg_builds: 'builds/package/'
 
-sources:
-- name: vineyard
-  git: 'https://github.com/vineyard-os/vineyard'
-  branch: 'dev'
-  regenerate:
-  - args: ['mkdir', '-p', '@THIS_SOURCE_DIR@/kernel/include']
-  - args: ['rm', '-rf', '@THIS_SOURCE_DIR@/kernel/include/efi']
-  - args: ['ln', '-sfT', '@SOURCE_ROOT@/third-party/vineyard-efi', '@THIS_SOURCE_DIR@/kernel/include/efi']
+imports:
+- file: 'vineyard.yml'
 
+sources:
 - name: binutils
   subdir: 'tools'
   git: 'git://sourceware.org/git/binutils-gdb.git'
@@ -26,6 +21,7 @@ sources:
   regenerate:
     - args: ['autoreconf']
       workdir: '@THIS_SOURCE_DIR@/ld'
+
 - name: gcc
   subdir: 'tools'
   git: 'git://gcc.gnu.org/git/gcc.git'
@@ -42,29 +38,6 @@ sources:
     workdir: '@THIS_SOURCE_DIR@/libstdc++-v3'
 
 tools:
-- name: image-builder
-  source:
-    subdir: 'tools'
-    git: 'https://github.com/vineyard-os/image-builder'
-    branch: 'master'
-  configure:
-  - args: ['chmod', '+x', '@THIS_SOURCE_DIR@/builder']
-
-- name: netboot-server
-  source:
-    subdir: 'tools'
-    git: 'https://github.com/vineyard-os/netboot-server'
-    branch: 'master'
-  configure:
-  - args:
-    - 'meson'
-    - '--prefix=@PREFIX@'
-    - '@THIS_SOURCE_DIR@'
-  compile:
-  - args: ['ninja']
-  install:
-  - args: ['ninja', 'install']
-
 - name: ovmf
   source:
     subdir: 'third-party'
@@ -220,114 +193,6 @@ tools:
       - args: ['make', 'install-target-libgcc']
 
 packages:
-- name: uni-vga
-  source:
-    subdir: 'third-party'
-    url: 'http://www.inp.nsk.su/~bolkhov/files/fonts/univga/uni-vga.tgz'
-    format: 'tar.gz'
-    extract_path: 'uni_vga'
-  configure: []
-  build: []
-
-- name: acpica
-  source:
-    subdir: 'third-party'
-    git: 'https://github.com/acpica/acpica'
-    tag: 'R10_18_19'
-  configure:
-  - args: ['make', '-C', '@THIS_SOURCE_DIR@', 'acpisrc']
-  - args: ['mkdir', '-p', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/dispatcher/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/events/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/executer/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/hardware/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/parser/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/namespace/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/utilities/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/tables/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/components/resources/.', '@SOURCE_ROOT@/vineyard/kernel/acpica']
-  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', 'vineyard/kernel/acpica/', 'vineyard/kernel/acpica/']
-    workdir: '@SOURCE_ROOT@'
-  - args: ['mkdir', '-p', '@SOURCE_ROOT@/vineyard/kernel/include/acpica']
-  - args: ['cp', '-r', '@THIS_SOURCE_DIR@/source/include/.', '@SOURCE_ROOT@/vineyard/kernel/include/acpica/']
-  - args: ['@THIS_SOURCE_DIR@/generate/unix/bin/acpisrc', '-ldqy', 'vineyard/kernel/include/acpica/', 'vineyard/kernel/include/acpica/']
-    workdir: '@SOURCE_ROOT@'
-  - args: |
-      sed -i "s/const AH_TABLE/const struct ah_table/g" @SOURCE_ROOT@/vineyard/kernel/include/acpica/acdisasm.h
-  - args: |
-      sed -i "s/(-w/(-W/g" @SOURCE_ROOT@/vineyard/kernel/include/acpica/acpi.h
-  build: []
-
-- name: vineyard-efi
-  source:
-    subdir: 'third-party'
-    git: 'https://github.com/vineyard-os/zircon-uefi'
-    branch: 'master'
-  configure: []
-  build: []
-
-- name: vineyard
-  from_source: 'vineyard'
-  tools_required:
-  - image-builder
-  - ovmf
-  - cross-binutils
-  - kernel-gcc
-  pkgs_required:
-  - acpica
-  - uni-vga
-  - vineyard-efi
-  - loader
-  configure:
-  - args: ['touch', '.config']
-    workdir: '@THIS_SOURCE_DIR@'
-  - args: ['chmod', '+x', 'util/bdf-to-c']
-    workdir: '@THIS_SOURCE_DIR@'
-  build:
-  - args: ['make', '../boot/kernel', '-j@PARALLELISM@']
-    workdir: '@THIS_SOURCE_DIR@'
-  tasks:
-  - args: ['make', 'install', 'test']
-    name: 'test'
-    workdir: '@THIS_SOURCE_DIR@'
-    environ:
-      'USE_GCC': '1'
-  - args: ['make', 'install', 'test-gdb']
-    name: 'test-gdb'
-    workdir: '@THIS_SOURCE_DIR@'
-    environ:
-      'USE_GCC': '1'
-  - args: ['make', 'install', 'test-vbox']
-    name: 'test-vbox'
-    workdir: '@THIS_SOURCE_DIR@'
-    environ:
-      'USE_GCC': '1'
-  - args: ['make', 'install', 'test-vmware']
-    name: 'test-vmware'
-    workdir: '@THIS_SOURCE_DIR@'
-    environ:
-      'USE_GCC': '1'
-  - args: ['make', 'clean']
-    name: 'clean'
-    workdir: '@THIS_SOURCE_DIR@'
-
-- name: loader
-  source:
-    git: 'https://github.com/vineyard-os/loader'
-    branch: 'master'
-    regenerate:
-    - args: ['ln', '-sfT', '@SOURCE_ROOT@/third-party/vineyard-efi', '@THIS_SOURCE_DIR@/include/efi']
-  pkgs_required:
-  - vineyard-efi
-  - efifs
-  build:
-  - args: ['make', 'install']
-    workdir: '@THIS_SOURCE_DIR@'
-  tasks:
-  - args: ['make', 'clean']
-    name: 'clean'
-    workdir: '@THIS_SOURCE_DIR@'
-
 - name: efifs
   source:
     subdir: 'third-party'
@@ -336,10 +201,3 @@ packages:
     filename: 'btrfs.efi'
   regenerate:
   - args: ['cp', '@THIS_SOURCE_DIR@/btrfs.efi', '@SOURCE_ROOT@/boot/btrfs.efi']
-
-tasks:
-- args: ['netboot-server/bin/server']
-  name: 'netboot'
-  tools_required:
-  - 'netboot-server'
-  workdir: '@SOURCE_ROOT@/tools/'

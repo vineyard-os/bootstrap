@@ -1,3 +1,4 @@
 #!/bin/bash
 alias xb="xbstrap run"
 alias xbp="xbstrap run --pkg"
+alias xbt="xbstrap run --tool"
