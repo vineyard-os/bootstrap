@@ -130,13 +130,17 @@ packages:
   pkgs_required:
   - vineyard-efi
   - efifs
+  configure:
+  - args:
+    - 'meson'
+    - '--cross-file'
+    - '@SOURCE_ROOT@/config/loader.cross'
+    - '--prefix=/efi/boot'
+    - '@THIS_SOURCE_DIR@'
   build:
-  - args: ['make', 'install']
-    workdir: '@THIS_SOURCE_DIR@'
-  tasks:
-  - args: ['make', 'clean']
-    name: 'clean'
-    workdir: '@THIS_SOURCE_DIR@'
+  - args: ['ninja', 'install']
+    environ:
+      'DESTDIR': '@BUILD_ROOT@/boot'
 
 tasks:
 - args: ['netboot-server/bin/server']
@@ -144,3 +148,9 @@ tasks:
   tools_required:
   - 'netboot-server'
   workdir: '@SOURCE_ROOT@/tools/'
+- args: |
+    tools/image-builder/builder config/hdd.yml --vdi --vmdk | bash
+  quiet: true
+  name: 'hdd'
+  tools_required:
+  - image-builder

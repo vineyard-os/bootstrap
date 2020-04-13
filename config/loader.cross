@@ -1,0 +1,14 @@
+[binaries]
+c = 'clang'
+c_ld = 'lld'
+strip = 'strip'
+
+[properties]
+asm_args: ['-fwin64', '-D', 'STACK=0xFFFFFE0000000000', '-D', 'STACK_SIZE=0x21000']
+ld_args = ['-subsystem:efi_application', '-nodefaultlib', '-dll', '-WX', '-entry:efi_main', '-debug:dwarf']
+
+[host_machine]
+system = 'windows'
+cpu_family = 'x86_64'
+cpu = 'x86_64'
+endian = 'little'
